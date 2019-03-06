@@ -5,7 +5,7 @@ set -euo pipefail
 
 target="./main.yml"
 rm "$target"
-echo "# Derived from ./vault-operator ./etcd-operator" >> "$target"
+echo "# Derived from ./manifests" >> "$target"
 echo "Creating main.yaml"
 
 for file in $(find ./manifests -type f -name "*.yaml" | sort) ; do

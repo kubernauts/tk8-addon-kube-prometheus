@@ -1,4 +1,4 @@
-# Derived from ./vault-operator ./etcd-operator
+# Derived from ./manifests
 apiVersion: v1
 kind: Namespace
 metadata:
