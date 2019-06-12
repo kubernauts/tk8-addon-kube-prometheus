@@ -1,49 +1,113 @@
-# TK8 CLI example Addon for developer
+# TK8 addon - kube-prometheus
 
-## Getting Started
+## What are TK8 addons?
 
-These instructions will get you all information you need to create your own tk8 addons on top of your kubernetes cluster
+- TK8 add-ons provide freedom of choice for the user to deploy tools and applications without being tied to any customized formats of deployment.
+- Simplified deployment process via CLI (will also be available via TK8 web in future).
+- With the TK8 add-ons platform, you can also build your own add-ons.
 
-### Prerequisites
+## What is kube-prometheus?
 
-This addon was created for the tk8 cli you could find it here: https://github.com/kubernauts/tk8
-Addon integration is supported on Version 0.5.0 and greater
+Kube-prometheus is a complete monitoring stack which includes:
 
-Alternative you can apply the main.yml directly with kubectl
+- The [Prometheus Operator](https://github.com/coreos/prometheus-operator)
+- Highly available [Prometheus](https://prometheus.io/)
+- Highly available [Alertmanager](https://github.com/prometheus/alertmanager)
+- [Prometheus node-exporter](https://github.com/prometheus/node_exporter)
+- [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics)
+- [Grafana](https://grafana.com/)
 
-## Development
+This stack is meant for cluster monitoring, so it is pre-configured to collect metrics from all Kubernetes components. In addition to that, it delivers a default set of dashboards and alerting rules. Many of the useful dashboards and alerts come from the [kubernetes-mixin project](https://github.com/kubernetes-monitoring/kubernetes-mixin), similar to this project it provides composable jsonnet as a library for users to customize to their needs.
 
-Create your own addons for TK8 is easy as well.
+## Prerequisites
 
-```bash
-./tk8 addon create my-addon
+- A kubernetes cluster.
+- Kubelet configuration must contain these flags:
+  - authentication-token-webhook=true This flag enables, that a ServiceAccount token can be used to authenticate against the kubelet(s).
+  - authorization-mode=Webhook This flag enables, that the kubelet will perform an RBAC request with the API to determine, whether the requesting entity (Prometheus in this case) is allowed to access a resource, in specific for this project the /metrics endpoint.
+
+
+## Get Started
+
+You can set up the kube-prometheus stack on a Kubernetes cluster by using TK8 addons.
+
+What do you need:
+- tk8 binary
+
+## Deploy kube-prometheus on the Kubernetes Cluster
+
+Run:
+```
+$ tk8 addon install kube-prometheus
+....
+....
+....
+kube-prometheus installation complete
 ```
 
-Then you can provide the main.yml with your addon components.
-Also it is possible to add a main.sh file wich runs before the main.yml is applyed to the cluster. So you can do some more stuff or generate a main.yml from subfolder yaml files.
+This command will clone the kubernauts' kube-prometheus repository (https://github.com/kubernauts/tk8-addon-kube-prometheus) locally and install the necessary components.
 
-To get more support join us on [Slack](https://kubernauts-slack-join.herokuapp.com)
+This command also creates:
+- A monitoring namespace to install the stack
+- A service of type ClusterIP for Prometheus, Grafana, and Alertmanager. (Feel free to change the service type of Granfana to LoadBalancer).
 
-## Contributing
+## Accessing the Dashboard
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+# Prometheus
 
-## Versioning
+For visualizing Prometheus, use port-forwarding to expose the service. Run:
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+    $ kubectl --namespace monitoring port-forward svc/prometheus-k8s 9090
 
-## Authors
+Then access Prometheus via http://localhost:9090
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+# Grafana
 
-See also the list of [contributors](https://github.com/kubernauts/tk8/contributors) who participated in this project.
+Run:
 
-## License
+    $ kubectl --namespace monitoring port-forward svc/grafana 3000
 
-This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details
+Then access Grafana via http://localhost:3000
 
-## Acknowledgments
+# Altertmanager
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+Run:
+
+    $ kubectl --namespace monitoring port-forward svc/alertmanager-main 9093
+
+Then access Alertmanager via http://localhost:9093
+
+## Uninstalling kube-prometheus
+
+For removing kube-prometheus from your cluster, we can use TK8 addon's destroy functionality. Run:
+```
+$ tk8 addon destroy kube-prometheus
+....
+....
+....
+kube-prometheus destroy complete
+```
+
+## Troubleshooting
+
+Race condition while installing the addon. This might happen sometimes if the resources on which the newly created resources are dependent were not in a Ready state. You might see an error description matching to the one below. 
+```
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "Alertmanager" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "Prometheus" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "PrometheusRule" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+unable to recognize "main.yml": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+```
+
+Note that, the error message might differ depending on the resource which caused it.
+
+A simple resolution for this case is to rerun `tk8 addon install kube-prometheus` and this should resolve the issue.
